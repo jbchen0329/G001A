@@ -1,0 +1,61 @@
+syntax = "proto3";
+package rpc_package;
+//define message
+message Inspt_Req{
+  string fn = 1;
+  bytes pic = 2;
+  bool pred = 3;
+}
+message Ack_Res{
+  bool ack = 1;
+}
+message Req{
+  repeated Sign sign = 1;
+}
+message Coordn{
+  float x = 1;
+  float y = 2;
+  float w = 3;
+  float h = 4;
+}
+message Threshold{
+  float threshold = 1;
+  repeated Sign sign = 2;
+}
+message System_Info{
+  float cpu_info = 1;
+  float gpu_info = 2;
+  float mem_info = 3;
+  float tmpt_info = 4;
+  float hd = 5;
+
+}
+enum Sign{
+  deviat = 0;
+  brk = 1;
+  metar = 2;
+  cpu = 3;
+  mem = 4;
+  tmpt = 5;
+  restart = 6;
+  system_info = 7;
+}
+//define algorithm service
+service Algorithm{
+  //Deviation
+  rpc DeviatPred(Inspt_Req) returns(Ack_Res){}
+  rpc CoordnGetter(Req) returns(Coordn){}
+  rpc CoordnSetter(Coordn) returns(Ack_Res){}
+  //break
+  rpc BrkPred(Inspt_Req) returns(Ack_Res){}
+  rpc ThresGetter(Req) returns(Threshold){}
+  rpc ThresSetter(Threshold) returns(Ack_Res){}
+  //material
+  rpc MetarPred(Inspt_Req) returns(Ack_Res){}
+}
+//define system service
+service System{
+  rpc SystemGetter(Req) returns(System_Info){}
+  rpc Restart(Req) returns(Ack_Res){}
+}
+
