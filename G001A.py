@@ -4,14 +4,21 @@ from multiprocessing import Process, Manager
 from PIL import Image
 import numpy as np
 import cv2
-import time
 import grpc
 from libs.yolo import YOLO
 import G001A_pb2_grpc
 import G001A_pb2
 from concurrent import futures
 from BeltDeviation import process_an_image
+from multiprocessing import Array, Value
 
+_HOST = ''
+_PORT = ''
+# 父进程创建缓冲栈，并传给各个子进程：
+q_pic = Manager().list()
+rio = Array('f', [])
+threshold_brk = Value('f', )
+threshold_mater = Value('f', )
 
 # 向共享缓冲栈中写入数据:
 def write(stack, cam, top: int) -> None:
@@ -79,44 +86,45 @@ def read(stack) -> None:
         #             print('通信异常')
         # except:
         #     continue
+
+        image_detect()
+
+
+def image_detect():
+    deviat_result= Process(target=DeviatPred, args=(q_pic,))
+    metar_result=Process(target=MetarPred, args=(q_pic,))
+    brk_result = Process(target=BrkPred, args=(q_pic,))
+
+def DeviatPred(stack):
+    while 1:
         frame = stack.pop()
-        image_detect(frame)
+        process_an_image(frame, rio)
 
-def image_detect(frame):
-    DeviatPred= Process(target=DeviatPred1, args=(frame, q_rio))
-    MetarPred=Process(target=MetarPred1, args=(frame, q_threshold_mater))
-    BrkPred = Process(target=BrkPred1, args=(frame, q_threshold_brk))
+def MetarPred(stack):
+    while 1:
+        frame = stack.pop()
+        yolo_param = {
+            "model_path": 'logs/posun_1.38.pth',
+            "anchors_path": 'model_data/yolo_anchors.txt',
+            "classes_path": 'model_data/posun_classes.txt',
+            "model_image_size": (608, 608, 3),
+            "confidence": threshold_mater,
+            "cuda": True,
+        }
+        detect(frame, yolo_param)
 
-
-
-
-def DeviatPred1(frame):
-    set rio
-    process_an_image(frame)
-
-def MetarPred1(frame):
-    set q_threshold_mater
-    yolo_param = {
-        "model_path": 'logs/posun_1.38.pth',
-        "anchors_path": 'model_data/yolo_anchors.txt',
-        "classes_path": 'model_data/posun_classes.txt',
-        "model_image_size": (608, 608, 3),
-        "confidence": 0.9,
-        "cuda": True,
-    }
-    detect(frame, yolo_param)
-
-def BrkPred1(frame):
-    set q_threshold_brk
-    yolo_param = {
-        "model_path": 'logs/posun_1.38.pth',
-        "anchors_path": 'model_data/yolo_anchors.txt',
-        "classes_path": 'model_data/posun_classes.txt',
-        "model_image_size": (608, 608, 3),
-        "confidence": 0.9,
-        "cuda": True,
-    }
-    detect(frame, yolo_param)
+def BrkPred(stack):
+    while 1:
+        frame = stack.pop()
+        yolo_param = {
+            "model_path": 'logs/posun_1.38.pth',
+            "anchors_path": 'model_data/yolo_anchors.txt',
+            "classes_path": 'model_data/posun_classes.txt',
+            "model_image_size": (608, 608, 3),
+            "confidence": threshold_brk,
+            "cuda": True,
+        }
+        detect(frame, yolo_param)
 
 def detect(frame, yolo_param):
     yolo = YOLO()
@@ -171,26 +179,31 @@ class AlgorithmServicer(G001A_pb2_grpc.AlgorithmServicer):
     #     pass
 
     # 服务端
-    def CoordnGetter(self):
-        rio = q_rio.pop()
-        q_rio.append(rio)
-        return q_rio
-    def CoordnSetter(self, rio):
-        q_rio.pop()
-        q_rio.append(rio)
-        return
-    def ThresGetter(self, sign):
-        if sign == 'brk':
-            thers = q_threshold_brk.pop()
+    def CoordnGetter(self, request, context):
+        return G001A_pb2.Coordn(
+            x = request.x,
+            y = request.y,
+            w = request.w,
+            h = request.h
+        )
+    def CoordnSetter(self, request, context):
+        l = [request.x, request.y, request.w, request.h]
+        global rio
+        rio = l
+        return G001A_pb2.Ack_Res(ack = True)
+    def ThresGetter(self, request, context):
+        return G001A_pb2.Threshold(
+            threshold = threshold_brk if request.sign == 'brk' else threshold_mater,
+            sign = request.sign
+        )
+    def ThresSetter(self, request, context):
+        if request.sign == 'brk':
+             global threshold_brk
+             threshold_brk = request.threshold
         else:
-            thers = q_threshold_mater.pop()
-        return thers
-    def ThresSetter(self, sign):
-        if sign == 'brk':
-            q_threshold_brk.append()
-        else:
-            q_threshold_mater.append()
-        return
+            global threshold_mater
+            threshold_mater = request.threshold
+        return G001A_pb2.Ack_Res(ack = True)
 def serve_algorithm():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     G001A_pb2_grpc.add_AlgorithmServicer_to_server(
@@ -200,13 +213,7 @@ def serve_algorithm():
     server.wait_for_termination()
 
 if __name__ == '__main__':
-    _HOST = ''
-    _PORT = ''
-    # 父进程创建缓冲栈，并传给各个子进程：
-    q_pic = Manager().list()
-    q_rio = Manager().list()
-    q_threshold_brk = Manager().Queue()
-    q_threshold_mater = Manager().Queue()
+
     pw = Process(target=write, args=(q_pic, "rtsp://admin:sjzn2018@10.61.100.106//Streaming/Channels/101", 100))
     pr = Process(target=read, args=(q_pic,))
     p_system_serve =Process(target=serve_system,)

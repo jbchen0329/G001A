@@ -23,11 +23,12 @@ theta = np.pi / 180
 threshold = 5
 min_line_len = 10
 max_line_gap = 80
-def process_an_image(img):
+def process_an_image(img, rio):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     blur_gray = cv2.GaussianBlur(gray, (blur_ksize, blur_ksize), 1)
     edges = cv2.Canny(blur_gray, 100, 150)
     rows, cols = edges.shape
+    # 计算rio
     points = np.array([[(1455, 497), (1610, 439), (1630, 480), (1490, 561)]])
     roi_edges = roi_mask(edges, points)
     drawing, lines = hough_lines(roi_edges, rho, theta, threshold, min_line_len, max_line_gap)
