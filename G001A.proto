@@ -54,7 +54,7 @@ service Algorithm{
   rpc MetarPred(Inspt_Req) returns(Ack_Res){}
 }
 //define system service
-service System{
+service Sys{
   rpc SystemGetter(Req) returns(System_Info){}
   rpc Restart(Req) returns(Ack_Res){}
 }
