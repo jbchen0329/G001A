@@ -4,6 +4,7 @@ from multiprocessing import Process, Manager
 from PIL import Image
 import numpy as np
 import cv2
+import psutil
 import grpc
 from libs.yolo import YOLO
 import G001A_pb2_grpc
@@ -19,6 +20,8 @@ q_pic = Manager().list()
 rio = Array('f', [])
 threshold_brk = Value('f', )
 threshold_mater = Value('f', )
+conn = grpc.insecure_channel(_HOST + ':' + _PORT)
+client_algorithm = G001A_pb2_grpc.AlgorithmStub(channel=conn)
 
 # 向共享缓冲栈中写入数据:
 def write(stack, cam, top: int) -> None:
@@ -60,7 +63,7 @@ def write(stack, cam, top: int) -> None:
 
 # 在缓冲栈中读取数据:
 def read(stack) -> None:
-    while True:
+    # while True:
         # try:
         #     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         #     # 转变成Image
@@ -87,18 +90,29 @@ def read(stack) -> None:
         # except:
         #     continue
 
-        image_detect()
+    image_detect()
 
 
 def image_detect():
     deviat_result= Process(target=DeviatPred, args=(q_pic,))
     metar_result=Process(target=MetarPred, args=(q_pic,))
     brk_result = Process(target=BrkPred, args=(q_pic,))
+    p_algorithm_serve = Process(target=serve_algorithm, )
+
+    deviat_result.start()
+    metar_result.start()
+    brk_result.start()
+    p_algorithm_serve.start()
+    deviat_result.join()
+    metar_result.join()
+    brk_result.join()
+    p_algorithm_serve.join()
 
 def DeviatPred(stack):
     while 1:
         frame = stack.pop()
         process_an_image(frame, rio)
+        client_algorithm.DeviatPred(G001A_pb2.Inspt_Req())
 
 def MetarPred(stack):
     while 1:
@@ -143,8 +157,6 @@ def grpc_client(flag, r_image, YOLO):
     r_image.save('./image/img.jpg')
     with open('./image/img.jpg', 'rb') as f:
         img_bin = f.read()
-    conn = grpc.insecure_channel(_HOST + ':' + _PORT)
-    client_algorithm = G001A_pb2_grpc.AlgorithmStub(channel=conn)
     if YOLO.get_defaults("sign") == 'Brk':
         pass
     else:
@@ -155,10 +167,24 @@ def grpc_client(flag, r_image, YOLO):
 class SystemServicer(G001A_pb2_grpc.SystemServicer):
     def __init__(self):
         pass
-    def SystemGetter(self):
-        pass
-    def Restart(self):
-        pass
+    def SystemGetter(self, request, context):
+        gpuLoadFile = "/sys/devices/gpu.0/load"
+        with open(gpuLoadFile, 'r') as gpuFile:
+          fileData = gpuFile.read()
+        gpu = fileData/10
+        mem = psutil.virtual_memory().percent
+        dsk = psutil.disk_usage("/").percent
+        cpu = psutil.cpu_percent(0)
+        tempt = psutil.sensors_temperatures()['thermal-fan-est'][0].current
+        return  G001A_pb2.System_Info(
+            cpu_info = cpu,
+            gpu_info = gpu,
+            mem_info = mem,
+            tmpt_info =  tempt,
+            hd = dsk
+        )
+    def Restart(self, request, context):
+        os.system('reboot')
 def serve_system():
   server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
   G001A_pb2_grpc.add_SystemServicer_to_server(
@@ -230,5 +256,5 @@ if __name__ == '__main__':
     # response = stub.SayHello(helloworld_pb2.HelloRequest(name='you'))
     # 等待pr结束:
     pr.join()
-    # pw进程里是死循环，无法等待其结束，只能强行终止:
-    pw.terminate()
+    pw.join()
+    p_system_serve.join()
