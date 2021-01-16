@@ -10,7 +10,7 @@ message Ack_Res{
   bool ack = 1;
 }
 message Req{
-  repeated Sign sign = 1;
+  string sign = 1;
 }
 message Coordn{
   float x = 1;
@@ -20,7 +20,7 @@ message Coordn{
 }
 message Threshold{
   float threshold = 1;
-  repeated Sign sign = 2;
+  string sign = 2;
 }
 message System_Info{
   float cpu_info = 1;
@@ -30,24 +30,31 @@ message System_Info{
   float hd = 5;
 
 }
-enum Sign{
-  deviat = 0;
-  brk = 1;
-  metar = 2;
-  cpu = 3;
-  mem = 4;
-  tmpt = 5;
-  restart = 6;
-  system_info = 7;
-}
+//sign类型标记
+//enum Sign{
+//  deviat = 0;
+//  brk = 1;
+//  metar = 2;
+//  cpu = 3;
+//  mem = 4;
+//  tmpt = 5;
+//  restart = 6;
+//  system_info = 7;
+//}
+//message Sign{
+//  string sign = 1;
+//}
+
 //define algorithm service
 service Algorithm{
   //Deviation
   rpc DeviatPred(Inspt_Req) returns(Ack_Res){}
+
   rpc CoordnGetter(Req) returns(Coordn){}
   rpc CoordnSetter(Coordn) returns(Ack_Res){}
   //break
   rpc BrkPred(Inspt_Req) returns(Ack_Res){}
+
   rpc ThresGetter(Req) returns(Threshold){}
   rpc ThresSetter(Threshold) returns(Ack_Res){}
   //material
@@ -58,4 +65,3 @@ service Sys{
   rpc SystemGetter(Req) returns(System_Info){}
   rpc Restart(Req) returns(Ack_Res){}
 }
-

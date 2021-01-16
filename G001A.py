@@ -12,9 +12,11 @@ import G001A_pb2
 from concurrent import futures
 from BeltDeviation import process_an_image
 from multiprocessing import Array, Value
+from algorithm_server import serve_algorithm
 
-_HOST = ''
-_PORT = ''
+_HOST = '172.16.0.9'
+_PORT = '123456'
+
 # 父进程创建缓冲栈，并传给各个子进程：
 q_pic = Manager().list()
 rio = Array('f', [])
@@ -193,50 +195,50 @@ def serve_system():
   server.start()
   server.wait_for_termination()
 
-class AlgorithmServicer(G001A_pb2_grpc.AlgorithmServicer):
-    def __init__(self):
-        pass
-    # 客户端
-    # def DeviatPred(self):
-    #     pass
-    # def MetarPred(self):
-    #     pass
-    # def BrkPred(self):
-    #     pass
-
-    # 服务端
-    def CoordnGetter(self, request, context):
-        return G001A_pb2.Coordn(
-            x = request.x,
-            y = request.y,
-            w = request.w,
-            h = request.h
-        )
-    def CoordnSetter(self, request, context):
-        l = [request.x, request.y, request.w, request.h]
-        global rio
-        rio = l
-        return G001A_pb2.Ack_Res(ack = True)
-    def ThresGetter(self, request, context):
-        return G001A_pb2.Threshold(
-            threshold = threshold_brk if request.sign == 'brk' else threshold_mater,
-            sign = request.sign
-        )
-    def ThresSetter(self, request, context):
-        if request.sign == 'brk':
-             global threshold_brk
-             threshold_brk = request.threshold
-        else:
-            global threshold_mater
-            threshold_mater = request.threshold
-        return G001A_pb2.Ack_Res(ack = True)
-def serve_algorithm():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    G001A_pb2_grpc.add_AlgorithmServicer_to_server(
-        AlgorithmServicer(),server)
-    server.add_insecure_port(_HOST + ':' + _PORT)
-    server.start()
-    server.wait_for_termination()
+# class AlgorithmServicer(G001A_pb2_grpc.AlgorithmServicer):
+#     def __init__(self):
+#         pass
+#     # 客户端
+#     # def DeviatPred(self):
+#     #     pass
+#     # def MetarPred(self):
+#     #     pass
+#     # def BrkPred(self):
+#     #     pass
+#
+#     # 服务端
+#     def CoordnGetter(self, request, context):
+#         return G001A_pb2.Coordn(
+#             x = request.x,
+#             y = request.y,
+#             w = request.w,
+#             h = request.h
+#         )
+#     def CoordnSetter(self, request, context):
+#         l = [request.x, request.y, request.w, request.h]
+#         global rio
+#         rio = l
+#         return G001A_pb2.Ack_Res(ack = True)
+#     def ThresGetter(self, request, context):
+#         return G001A_pb2.Threshold(
+#             threshold = threshold_brk if request.sign == 'brk' else threshold_mater,
+#             sign = request.sign
+#         )
+#     def ThresSetter(self, request, context):
+#         if request.sign == 'brk':
+#              global threshold_brk
+#              threshold_brk = request.threshold
+#         else:
+#             global threshold_mater
+#             threshold_mater = request.threshold
+#         return G001A_pb2.Ack_Res(ack = True)
+# def serve_algorithm():
+#     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+#     G001A_pb2_grpc.add_AlgorithmServicer_to_server(
+#         AlgorithmServicer(),server)
+#     server.add_insecure_port(_HOST + ':' + _PORT)
+#     server.start()
+#     server.wait_for_termination()
 
 if __name__ == '__main__':
 

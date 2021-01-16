@@ -270,7 +270,7 @@ class Algorithm(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
 
-class SystemStub(object):
+class SysStub(object):
     """define system service
     """
 
@@ -281,18 +281,18 @@ class SystemStub(object):
             channel: A grpc.Channel.
         """
         self.SystemGetter = channel.unary_unary(
-                '/rpc_package.System/SystemGetter',
+                '/rpc_package.Sys/SystemGetter',
                 request_serializer=G001A__pb2.Req.SerializeToString,
                 response_deserializer=G001A__pb2.System_Info.FromString,
                 )
         self.Restart = channel.unary_unary(
-                '/rpc_package.System/Restart',
+                '/rpc_package.Sys/Restart',
                 request_serializer=G001A__pb2.Req.SerializeToString,
                 response_deserializer=G001A__pb2.Ack_Res.FromString,
                 )
 
 
-class SystemServicer(object):
+class SysServicer(object):
     """define system service
     """
 
@@ -309,7 +309,7 @@ class SystemServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_SystemServicer_to_server(servicer, server):
+def add_SysServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'SystemGetter': grpc.unary_unary_rpc_method_handler(
                     servicer.SystemGetter,
@@ -323,12 +323,12 @@ def add_SystemServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'rpc_package.System', rpc_method_handlers)
+            'rpc_package.Sys', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class System(object):
+class Sys(object):
     """define system service
     """
 
@@ -343,7 +343,7 @@ class System(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/rpc_package.System/SystemGetter',
+        return grpc.experimental.unary_unary(request, target, '/rpc_package.Sys/SystemGetter',
             G001A__pb2.Req.SerializeToString,
             G001A__pb2.System_Info.FromString,
             options, channel_credentials,
@@ -360,7 +360,7 @@ class System(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/rpc_package.System/Restart',
+        return grpc.experimental.unary_unary(request, target, '/rpc_package.Sys/Restart',
             G001A__pb2.Req.SerializeToString,
             G001A__pb2.Ack_Res.FromString,
             options, channel_credentials,
