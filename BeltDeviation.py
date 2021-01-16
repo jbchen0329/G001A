@@ -6,8 +6,7 @@ import glob
 import os
 import time
 import grpc
-import detect_pb2
-import detect_pb2_grpc
+
 # from moviepy.editor import VideoFileClip
 # 高斯滤波核大小
 _HOST = '10.61.100.105'
